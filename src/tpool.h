@@ -23,6 +23,16 @@ typedef struct tpool_t tpool_t;
  */
 tpool_t *f_tpool_create(int num_of_threads, int queue_size);
 
+
+/**
+ * @brief Adds new taks in the queue
+ *
+ * @param pool:         the pointer to the thread pool
+ * @param function:     the function pointer points to the function that needed to run
+ *
+ * @return 0 on Success and -1 on failure
+ *
+ */
 int f_tpool_add(tpool_t *pool, void (*function)(void *, void *));
 
 int f_tpool_done(tpool_t *pool, int maxoutput, int timeout);
