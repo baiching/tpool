@@ -11,6 +11,16 @@ extern "C" {
 
 typedef struct tpool_t tpool_t;
 
+
+/**
+ * @brief Creates the thread pool
+ *
+ * @param num_of_threads: the number of threads you want to be created
+ * @param queue_size:     the size of the queue for tasks
+ *
+ * @return a new threadpool or a NULL value with a printf stating the error
+ *
+ */
 tpool_t *f_tpool_create(int num_of_threads, int queue_size);
 
 int f_tpool_add(tpool_t *pool, void (*function)(void *, void *));
