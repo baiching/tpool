@@ -41,3 +41,18 @@ struct tpool_t {
   int tail;                             // to insert data into the buffer
   int active_threads;                   // number of active threads
 };
+
+/**
+ * A worker thread
+ *
+ * @param pool:                         ref to the owner of this thread
+ *
+ */
+static void *f_worker_thread(void *pool);
+
+
+static int *f_tpool_free(void *pool);
+
+tpool_t *f_tpool_create(int num_of_threads, int queue_size){
+    // Threalpool creation goes here
+}
