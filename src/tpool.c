@@ -2,6 +2,7 @@
 #include <pthread.h>
 #include <stdio.h>
 #include <errno.h>
+#include <string.h>
 
 
 #include "tpool.h"
@@ -74,7 +75,7 @@ tpool_t *f_tpool_create(int num_of_threads, int queue_size){
         return NULL;
     }
 
-    if(init(&pool) == NULL){
+    if(init(pool) == NULL){
         printf("Threadpool memory allocation failed.\n");
         exit(EXIT_FAILURE);
     }
@@ -84,20 +85,38 @@ tpool_t *f_tpool_create(int num_of_threads, int queue_size){
     pool->worker_threads = (pthread_t *)malloc(sizeof(pthread_t) * num_of_threads);
     pool->queue = (s_tpool_task *)malloc(sizeof(s_tpool_task) * queue_size);
 
+    //Initializing mutex
     if(pthread_mutex_init(&(pool->lock), NULL) < 0){
-        printf("Error occured: %d.\n", errno);
+        printf("Error occured Initializing mutex: %s.\n", strerror(errno));
         free(pool);
-        exit(EXIT_FAILURE);
+        return NULL;
     }
 
     // Initilizing notifying variable
     if(pthread_cond_init(&(pool->notify), NULL) < 0){
-        printf("Error occured: %d.\n", errno);
+        printf("Error occured initializing condtionals: %s.\n", strerror(errno));
         free(pool);
-        exit(EXIT_FAILURE);
+        return NULL;
+    }
+
+    // creating worker threads
+    for(int i = 0; i <num_of_threads; i++){
+        // pthread_create takes 4 parameters
+        // 1. a pthread_t pointer to store the thread identifier
+        // 2. thread attributes (or NULL for defaults)
+        // 3. pointer to the function the thread will execute
+        // 4. the argument for the worker thread
+        if(pthread_create(&(pool->worker_threads[i]), NULL,                    f_worker_thread, (void *)pool) < 0){
+            f_tpool_destroy(pool);
+            printf("Thread creation has failed: %s", strerror(errno));
+            return NULL;
+        }
+
+        pool->active_threads++;
     }
 
 
+    return pool;
 }
 
 
