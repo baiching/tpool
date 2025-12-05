@@ -15,7 +15,7 @@
 typedef enum {
     PENDING,
     ONGOING,
-    DONE
+    FINISHED
 }e_task_status;
 
 /**
@@ -42,6 +42,7 @@ struct tpool_t {
   int queue_size;                       // size of the queue/ the size of the ring buffer for tasks
   int head;                             // to read items from the buffer
   int tail;                             // to insert data into the buffer
+  int queue_counter;
   int active_threads;                   // number of active threads
 };
 
@@ -62,6 +63,7 @@ static tpool_t *init(tpool *pool){
     pool->head = 0;
     pool->tail = 0;
     pool->active_threads = 0;
+    pool->queue_counter = 0;
 
     return pool;
 }
@@ -119,7 +121,49 @@ tpool_t *f_tpool_create(int num_of_threads, int queue_size){
     return pool;
 }
 
+int f_tpool_add_task(tpool_t *pool, void ( *function)(void *), void *arg){
+    int err = 0;
 
+    if(pool == NULL || function == NULL){
+        printf("Threadpool is empty or function wasn't passed.\n");
+        return -1;
+    }
+
+    if(pthread_mutex_lock(&(pool->lock)) < 0) {
+        printf("Mutex lock failed.\n");
+        return -1;
+    }
+
+    int next = (pool->tail + 1) % pool->queue_size;
+
+    do {
+        if(pool->queue_counter == pool->queue_size){
+            printf("The queue is full.\n");
+            err = -1;
+            break;
+        }
+
+        pool->queue[pool->tail].func = function;
+        pool->queue[pool->tail].argument = arg;
+
+        pool->tail = next;
+        pool->queue_counter++;
+
+
+        if(pthread_cond_signal(&(pool->notify)) < 0) {
+            printf("Thread broadcast wasn't successfull.\n");
+            err = -1;
+            break;
+        }
+    } while(0)
+
+    if(pthread_mutex_unlock(&(pool->lock)) < 0){
+        printf("Thread mutex unlock failed.\n");
+        err = -1;
+    }
+
+    return err;
+}
 
 
 
