@@ -44,6 +44,7 @@ struct tpool_t {
   int tail;                             // to insert data into the buffer
   int queue_counter;
   int active_threads;                   // number of active threads
+  bool stop;                         // set it as true to stop the treads
 };
 
 /**
@@ -163,6 +164,38 @@ int f_tpool_add_task(tpool_t *pool, void ( *function)(void *), void *arg){
     }
 
     return err;
+}
+
+int f_tpool_destroy(tpool_t *pool, bool stop){
+
+    if(pool == NULL){
+        printf("Invalid threadpool.\n");
+    }
+
+    if(pthread_mutex_lock(&(pool->lock)) < 0) {
+        printf("Mutex lock failed.\n");
+        return -1;
+    }
+
+    if(stop != true){
+        printf("please set the value of stop as true to stop the threads.\n");
+        return -1;
+    }
+
+    // waking up the worker threads
+    pthread_cond_broadcast(&(pool->notify));
+    pthread_mutex_unlock(&(pool->lock));
+
+
+    // joining all the worker threads
+    for(int i = 0; i < pool->active_threads; i++){
+        if(pthread_join(&(pool->worker_threads), NULL) < 0) {
+            printf("Pool deallocation failed.\n");
+            return -1;
+        }
+    }
+
+    return f_tpool_free(pool);
 }
 
 

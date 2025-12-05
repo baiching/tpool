@@ -34,7 +34,7 @@ tpool_t *f_tpool_create(int num_of_threads, int queue_size);
  * @return 0 on Success and -1 on failure
  *
  */
-int f_tpool_add(tpool_t *pool, void (*function)(void *), void *arg);
+int f_tpool_add_task(tpool_t *pool, void ( *function)(void *), void *arg);
 
 /**
  * @brief Adds new taks in the queue
@@ -53,11 +53,12 @@ int f_tpool_done(tpool_t *pool, void **output, int maxoutput);
  * @brief Finishes all unfished tasks and destroy the thread pool
  *
  * @param pool:         the thread pool that required to destroy
+ * @param stop:     To shutdown put the value to 1
  *
  * @return              0 on Success and -1 on failure
  *
  */
-int f_tpool_destroy(tpool_t *pool);
+int f_tpool_destroy(tpool_t *pool, bool stop);
 
 #ifdef __cplusplus
 }
