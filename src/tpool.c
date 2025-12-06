@@ -42,9 +42,9 @@ struct tpool_t {
   int queue_size;                       // size of the queue/ the size of the ring buffer for tasks
   int head;                             // to read items from the buffer
   int tail;                             // to insert data into the buffer
-  int queue_counter;
-  int active_threads;                   // number of active threads
-  bool stop;                         // set it as true to stop the treads
+  int queue_counter;                    // pending tasks
+  int starting_threads;                 // number of threads just started
+  int stop;                             // set it as 1 to stop the treads
 };
 
 /**
@@ -53,7 +53,7 @@ struct tpool_t {
  * @param pool:                         ref to the owner of this thread
  *
  */
-static void *f_worker_thread(tpool_t *pool);
+static void *f_worker_thread(void *pool);
 
 
 static int f_tpool_free(tpool_t *pool);
@@ -63,8 +63,9 @@ static tpool_t *init(tpool_t *pool){
 
     pool->head = 0;
     pool->tail = 0;
-    pool->active_threads = 0;
+    pool->starting_threads = 0;
     pool->queue_counter = 0;
+    pool->stop = 0;
 
     return pool;
 }
@@ -110,12 +111,13 @@ tpool_t *f_tpool_create(int num_of_threads, int queue_size){
         // 3. pointer to the function the thread will execute
         // 4. the argument for the worker thread
         if(pthread_create(&(pool->worker_threads[i]), NULL,                    f_worker_thread, (void *)pool) < 0){
-            f_tpool_destroy(pool, 1);
+            pool->stop = 1;
+            f_tpool_destroy(pool);
             printf("Thread creation has failed: %s", strerror(errno));
             return NULL;
         }
 
-        pool->active_threads++;
+        pool->starting_threads++;
     }
 
 
@@ -166,7 +168,7 @@ int f_tpool_add_task(tpool_t *pool, void ( *function)(void *), void *arg){
     return err;
 }
 
-int f_tpool_destroy(tpool_t *pool, int stop){
+int f_tpool_destroy(tpool_t *pool){
 
     if(pool == NULL){
         printf("Invalid threadpool.\n");
@@ -178,7 +180,7 @@ int f_tpool_destroy(tpool_t *pool, int stop){
         return -1;
     }
 
-    if(stop != 0){
+    if(pool->stop != 0){
         printf("please set the value of stop as true to stop the threads.\n");
         return -1;
     }
@@ -189,7 +191,7 @@ int f_tpool_destroy(tpool_t *pool, int stop){
 
 
     // joining all the worker threads
-    for(int i = 0; i < pool->active_threads; i++){
+    for(int i = 0; i < pool->starting_threads; i++){
         if(pthread_join(pool->worker_threads[i], NULL) < 0) {
             printf("Pool deallocation failed.\n");
             return -1;
@@ -222,7 +224,41 @@ int f_tpool_free(tpool_t *pool){
     return 0;
 }
 
+static void *f_worker_thread(void *pool){
+    s_tpool_task task;
 
+    while(1){
+        pthread_mutex_lock(&(pool->lock));
+
+        while((pool->starting_threads == 0) && (pool->stop != 1)){
+            pthread_cond_wait(&(pool->notify), &(pool->lock));
+        }
+
+        if((pool->stop == 1) && (pool->starting_threads == 0)){
+            break;
+        }
+
+        // Getting tasks
+        task.func = pool->queue[pool->head].func;
+        task.argument = pool->queue[pool->head].argument;
+
+        pool->head = (pool->head + 1) % pool->queue_size;
+
+        pool->queue_counter--;
+
+
+        pthread_mutex_unlock(&(pool->lock));
+
+        // starting the work
+        task.func(task.argument);
+    }
+
+    pool->starting_threads--;
+
+    pthread_mutex_unlock(&(pool->lock));
+    pthread_exit(NULL);
+    return NULL;
+}
 
 
 

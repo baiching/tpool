@@ -53,12 +53,11 @@ int f_tpool_done(tpool_t *pool, void **output, int maxoutput);
  * @brief Finishes all unfished tasks and destroy the thread pool
  *
  * @param pool:         the thread pool that required to destroy
- * @param stop:         To shutdown set the value to 1
  *
  * @return              0 on Success and -1 on failure
  *
  */
-int f_tpool_destroy(tpool_t *pool, int stop);
+int f_tpool_destroy(tpool_t *pool);
 
 #ifdef __cplusplus
 }
