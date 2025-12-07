@@ -1,6 +1,7 @@
 #ifndef TPOOL_H
 #define TPOOL_H
 
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -11,6 +12,12 @@ extern "C" {
 
 typedef struct tpool_t tpool_t;
 
+/**
+ * @breif Returns a unique task id(thread safe)
+ *
+ *
+ */
+uint32_t f_get_taskid(void);
 
 /**
  * @brief Creates the thread pool

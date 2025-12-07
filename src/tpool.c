@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <errno.h>
 #include <string.h>
-
+#include <stdint.h>
 
 #include "tpool.h"
 
@@ -13,9 +13,9 @@
  *
  */
 typedef enum {
-    PENDING,
-    ONGOING,
-    FINISHED
+    TASK_PENDING,
+    TASK_ONGOING,
+    TASK_FINISHED
 }e_task_status;
 
 /**
@@ -47,13 +47,18 @@ struct tpool_t {
   int stop;                             // set it as 1 to stop the treads
 };
 
+// tid for generating task id
+static uint32_t tid = 0;
+// this lock is for task id creation only
+pthread_mutex_t tlock = PTHREAD_MUTEX_INITIALIZER;
+
 /**
  * A worker thread
  *
  * @param pool:                         ref to the owner of this thread
  *
  */
-static void *f_worker_thread(void *pool);
+static void *f_worker_thread(void *tpool);
 
 
 static int f_tpool_free(tpool_t *pool);
@@ -68,6 +73,14 @@ static tpool_t *init(tpool_t *pool){
     pool->stop = 0;
 
     return pool;
+}
+
+uint32_t f_get_taskid(void){
+    pthread_mutex_lock(&tlock);
+    tid++;
+    pthread_mutex_unlock(&tlock);
+
+    return tid;
 }
 
 tpool_t *f_tpool_create(int num_of_threads, int queue_size){
@@ -110,7 +123,7 @@ tpool_t *f_tpool_create(int num_of_threads, int queue_size){
         // 2. thread attributes (or NULL for defaults)
         // 3. pointer to the function the thread will execute
         // 4. the argument for the worker thread
-        if(pthread_create(&(pool->worker_threads[i]), NULL,                    f_worker_thread, (void *)pool) < 0){
+        if(pthread_create(&(pool->worker_threads[i]), NULL, f_worker_thread, (void *)pool) < 0){
             pool->stop = 1;
             f_tpool_destroy(pool);
             printf("Thread creation has failed: %s", strerror(errno));
@@ -124,14 +137,16 @@ tpool_t *f_tpool_create(int num_of_threads, int queue_size){
     return pool;
 }
 
-int f_tpool_add_task(tpool_t *pool, void ( *function)(void *), void *arg){
+int f_tpool_add_task(tpool_t *pool, void (*function)(void *), void *arg){
     int err = 0;
 
+    // checking for empty entries
     if(pool == NULL || function == NULL){
         printf("Threadpool is empty or function wasn't passed.\n");
         return -1;
     }
 
+    // aquiring the lock to ensure none other thread interferes during adding task
     if(pthread_mutex_lock(&(pool->lock)) < 0) {
         printf("Mutex lock failed.\n");
         return -1;
@@ -140,19 +155,23 @@ int f_tpool_add_task(tpool_t *pool, void ( *function)(void *), void *arg){
     int next = (pool->tail + 1) % pool->queue_size;
 
     do {
+        // checking if the queue is full or not
         if(pool->queue_counter == pool->queue_size){
             printf("The queue is full.\n");
             err = -1;
             break;
         }
 
+        // adding the task to the queue
         pool->queue[pool->tail].func = function;
         pool->queue[pool->tail].argument = arg;
 
+        // pushing the tail to next emty queue
         pool->tail = next;
         pool->queue_counter++;
 
-
+        // Signal a waiting worker that the queue has been updated
+        // and the lock will be released for it to proceed.
         if(pthread_cond_signal(&(pool->notify)) < 0) {
             printf("Thread broadcast wasn't successfull.\n");
             err = -1;
@@ -160,6 +179,7 @@ int f_tpool_add_task(tpool_t *pool, void ( *function)(void *), void *arg){
         }
     } while(0);
 
+    // lock is now released
     if(pthread_mutex_unlock(&(pool->lock)) < 0){
         printf("Thread mutex unlock failed.\n");
         err = -1;
@@ -224,8 +244,9 @@ int f_tpool_free(tpool_t *pool){
     return 0;
 }
 
-static void *f_worker_thread(void *pool){
+static void *f_worker_thread(void *tpool){
     s_tpool_task task;
+    tpool_t *pool = (tpool_t *)tpool;
 
     while(1){
         pthread_mutex_lock(&(pool->lock));
