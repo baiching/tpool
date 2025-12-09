@@ -12,6 +12,7 @@ extern "C" {
 
 typedef struct tpool_t tpool_t;
 
+
 /**
  * @breif Returns a unique task id(thread safe)
  *
@@ -37,11 +38,12 @@ tpool_t *f_tpool_create(int num_of_threads, int queue_size);
  * @param pool:         the pointer to the thread pool
  * @param function:     the function pointer points to the function that needed to run
  * @param arg:          the argument that needs to be passed to the function
+ * @param taskid:       taskid for individual tasks, f_get_taskid() provides it
  *
  * @return 0 on Success and -1 on failure
  *
  */
-int f_tpool_add_task(tpool_t *pool, void ( *function)(void *), void *arg);
+int f_tpool_add_task(tpool_t *pool, uint32_t taskid, void ( *function)(void *), void *arg);
 
 /**
  * @brief Adds new taks in the queue

@@ -29,14 +29,31 @@ typedef enum {
 typedef struct {
     void (*func)(void *);
     void *argument;
-    e_task_status status;
+    uint32_t task_id;
 }s_tpool_task;
 
+/**
+ * @brief It's exclusively for serving executed tasks taskid on completion
+ *
+ * @var task_id: the unique identifier for each task
+ * @var status: current state of the task
+ * @var queue_size: the size of the ring buffer for tasks
+ * @var queue_counter: the number of tasks in the queue
+ *
+ */
+typedef struct{
+    uint32_t task_id;
+    e_task_status status;
+    int queue_size;
+    int queue_counter;
+    int head;
+    int tail;
+}s_task_out;
 
 struct tpool_t {
   pthread_mutex_t lock;
   pthread_cond_t notify;                // notify worker threads
-  pthread_t *worker_threads;                   // a list of worker threads
+  pthread_t *worker_threads;            // a list of worker threads
   s_tpool_task *queue;                  // a pointer to the individual tasks queue
   int num_of_threads;                   // total number of thread created inside the thread pool
   int queue_size;                       // size of the queue/ the size of the ring buffer for tasks
@@ -45,12 +62,16 @@ struct tpool_t {
   int queue_counter;                    // pending tasks
   int starting_threads;                 // number of threads just started
   int stop;                             // set it as 1 to stop the treads
+
 };
 
 // tid for generating task id
 static uint32_t tid = 0;
 // this lock is for task id creation only
 pthread_mutex_t tlock = PTHREAD_MUTEX_INITIALIZER;
+static struct s_task_out *tout = NULL;
+
+
 
 /**
  * A worker thread
@@ -101,6 +122,7 @@ tpool_t *f_tpool_create(int num_of_threads, int queue_size){
 
     pool->worker_threads = (pthread_t *)malloc(sizeof(pthread_t) * num_of_threads);
     pool->queue = (s_tpool_task *)malloc(sizeof(s_tpool_task) * queue_size);
+    tout = (s_task_out *)malloc(sizeof(s_task_out) * queue_size);
 
     //Initializing mutex
     if(pthread_mutex_init(&(pool->lock), NULL) < 0){
@@ -137,7 +159,7 @@ tpool_t *f_tpool_create(int num_of_threads, int queue_size){
     return pool;
 }
 
-int f_tpool_add_task(tpool_t *pool, void (*function)(void *), void *arg){
+int f_tpool_add_task(tpool_t *pool, uint32_t taskid, void (*function)(void *), void *arg){
     int err = 0;
 
     // checking for empty entries
@@ -165,6 +187,7 @@ int f_tpool_add_task(tpool_t *pool, void (*function)(void *), void *arg){
         // adding the task to the queue
         pool->queue[pool->tail].func = function;
         pool->queue[pool->tail].argument = arg;
+        pool->queue[pool->tail].task_id = taskid;
 
         // pushing the tail to next emty queue
         pool->tail = next;
