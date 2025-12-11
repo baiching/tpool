@@ -1,3 +1,17 @@
+/**
+ * A Simple Threadpool with Completion
+ * @author Uthowaipru Chowdhury Baiching
+ *
+ * API List:
+ * 1. uint32_t f_get_taskid(void) : a unique task id which is required for adding the task in the threadpool
+ * 2. tpool_t *f_tpool_create( num_of_threads, queue_size): Creates the thread pool and
+ *                                                                 returns the newly created threadpool.
+ * 3. int f_tpool_add_task(pool, taskid, function pointer, argument): adds task it the tpool queue
+ * 4. int f_tpool_done(*task, maxoutput): retrives the completed tasks status with their ID's
+ * 5. int f_tpool_destroy(pool): destroys the threadpool
+ *
+ */
+
 #ifndef TPOOL_H
 #define TPOOL_H
 
@@ -49,14 +63,14 @@ int f_tpool_add_task(tpool_t *pool, uint32_t taskid, void ( *function)(void *), 
 /**
  * @brief Adds new taks in the queue
  *
- * @param pool:         the pointer to the thread pool
- * @param tout:       It points to the completed tasks results
+ *
+ * @param task:         It's size is needed to be equal to the queue_size parameter for tpool creation
  * @param maxoutput:    total results could be returned at once
  *
- * @return              number of completed tasks
+ * @return              number of completed tasks. On failure it returns -1
  *
  */
-int f_tpool_done(tpool_t *pool, TaskOut *tout, int maxoutput);
+int f_tpool_done(TaskOut *task, int maxoutput);
 
 
 /**

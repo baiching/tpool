@@ -266,7 +266,7 @@ int f_tpool_destroy(tpool_t *pool){
 }
 
 
-int f_tpool_free(tpool_t *pool){
+static int f_tpool_free(tpool_t *pool){
     if(pool == NULL){
         printf("Invalid threadpool.\n");
         return -1;
@@ -285,6 +285,7 @@ int f_tpool_free(tpool_t *pool){
     pthread_cond_destroy(&(pool->notify));
 
     free(pool);
+    free(tout->out_queue)
     free(tout);
     return 0;
 }
@@ -328,7 +329,6 @@ static void *f_worker_thread(void *tpool){
         tout->tail = (tout->tail + 1) % tout->queue_size;
         tout->queue_counter++;
 
-        pthread_cond_signal(&(tout->tnotify), NULL);
         pthread_mutex_unlock(&(tout->tlock));
 
     }
@@ -340,8 +340,40 @@ static void *f_worker_thread(void *tpool){
     return NULL;
 }
 
-int f_tpool_done(tpool_t *pool, TaskOut *tout, int maxoutput){
-    // TODO
+int f_tpool_done(tpool_t *pool, TaskOut *task, int maxoutput){
+
+    int ncount = 0;
+
+    if(maxoutput <= 0){
+        printf("Please spcify maxoutput variable to greater than 0.\n");
+        return -1;
+    }
+
+    if(task == NULL){
+        printf("Tasout can't be NULL.\n");
+        return -1;
+    }
+
+    pthread_mutex_lock(&tout->tlock);
+
+    for(int i = 0; i < maxoutput && tout->head != tout->tail; i++){
+        // storing the output from the buffer
+        task[i].task_id = tout->out_queue[tout->head].task_id;
+        task[i].status = tout->out_queue[tout->head].status;
+
+        tout->head = (tout->head + 1) % tout->queue_size;
+        ncount++;
+
+    }
+
+    pthread_mutex_unlock(&(tout->tlock));
+
+    return ncount;
 }
+
+
+
+
+
 
 
