@@ -41,10 +41,10 @@ typedef struct {
  * @var queue_counter: the number of tasks in the queue
  *
  */
-typedef struct{
+struct TaskOut {
     uint32_t task_id;
     e_task_status status;
-}TaskOut;
+};
 
 /**
  * @var tlock: lock for output ring
@@ -62,7 +62,7 @@ typedef struct {
     int queue_counter;
     int head;
     int tail;
-}TaskMaintainer
+}TaskMaintainer;
 
 struct tpool_t {
   pthread_mutex_t lock;
@@ -140,18 +140,20 @@ tpool_t *f_tpool_create(int num_of_threads, int queue_size){
     pool->queue = (s_tpool_task *)malloc(sizeof(s_tpool_task) * queue_size);
 
     // Initializing completion buffer
-
-    tout = (s_task_out *)malloc(sizeof(s_task_out) * queue_size);
+    tout = (TaskMaintainer *)malloc(sizeof(TaskMaintainer));
+    tout->head = tout->tail = tout->queue_counter = 0;
+    tout->queue_size = queue_size;
+    tout->out_queue = (TaskOut *)malloc(sizeof(TaskOut) * queue_size);
 
     //Initializing mutex
-    if(pthread_mutex_init(&(pool->lock), NULL) < 0){
+    if((pthread_mutex_init(&(pool->lock), NULL) < 0) || (pthread_mutex_init(&(tout->tlock), NULL) < 0)){
         printf("Error occured Initializing mutex: %s.\n", strerror(errno));
         free(pool);
         return NULL;
     }
 
     // Initilizing notifying variable
-    if(pthread_cond_init(&(pool->notify), NULL) < 0){
+    if((pthread_cond_init(&(pool->notify), NULL) < 0) || (pthread_cond_init(&(tout->tnotify), NULL) < 0)){
         printf("Error occured initializing condtionals: %s.\n", strerror(errno));
         free(pool);
         return NULL;
@@ -318,9 +320,16 @@ static void *f_worker_thread(void *tpool){
         task.func(task.argument);
 
         // updating the task status as complete
-        // pthread_mutex_lock(&tlock);
-        // tout->tail.task_id = task.task_id;
-        // tout.status = TASK_FINISHED;
+        pthread_mutex_lock(&tout->tlock);
+        tout->out_queue[tout->tail].task_id = task.task_id;
+        tout->out_queue[tout->tail].status = TASK_FINISHED;
+
+        // moving to the next buffer
+        tout->tail = (tout->tail + 1) % tout->queue_size;
+        tout->queue_counter++;
+
+        pthread_cond_signal(&(tout->tnotify), NULL);
+        pthread_mutex_unlock(&(tout->tlock));
 
     }
 
@@ -331,6 +340,8 @@ static void *f_worker_thread(void *tpool){
     return NULL;
 }
 
-
+int f_tpool_done(tpool_t *pool, TaskOut *tout, int maxoutput){
+    // TODO
+}
 
 

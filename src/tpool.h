@@ -11,6 +11,7 @@ extern "C" {
 #define MAX_QUEUE 65536
 
 typedef struct tpool_t tpool_t;
+typedef struct TaskOut TaskOut;
 
 
 /**
@@ -49,13 +50,13 @@ int f_tpool_add_task(tpool_t *pool, uint32_t taskid, void ( *function)(void *), 
  * @brief Adds new taks in the queue
  *
  * @param pool:         the pointer to the thread pool
- * @param output:       It points to the completed tasks results
+ * @param tout:       It points to the completed tasks results
  * @param maxoutput:    total results could be returned at once
  *
  * @return              number of completed tasks
  *
  */
-int f_tpool_done(tpool_t *pool, void **output, int maxoutput);
+int f_tpool_done(tpool_t *pool, TaskOut *tout, int maxoutput);
 
 
 /**
