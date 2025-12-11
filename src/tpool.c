@@ -44,11 +44,25 @@ typedef struct {
 typedef struct{
     uint32_t task_id;
     e_task_status status;
+}TaskOut;
+
+/**
+ * @var tlock: lock for output ring
+ * @var tnotify: notify worker threads
+ * @var out_queue: a pointer to the individual tasks completion queue
+ * @var queue_size: size of the output buffer
+ * @var queue_counter: active elements on the buffer
+ */
+
+typedef struct {
+    pthread_mutex_t tlock;
+    pthread_cond_t tnotify;
+    TaskOut *out_queue;
     int queue_size;
     int queue_counter;
     int head;
     int tail;
-}s_task_out;
+}TaskMaintainer
 
 struct tpool_t {
   pthread_mutex_t lock;
@@ -69,7 +83,9 @@ struct tpool_t {
 static uint32_t tid = 0;
 // this lock is for task id creation only
 pthread_mutex_t tlock = PTHREAD_MUTEX_INITIALIZER;
-static struct s_task_out *tout = NULL;
+//static struct s_task_out *tout = NULL;
+
+static TaskMaintainer *tout = NULL;
 
 
 
@@ -122,6 +138,9 @@ tpool_t *f_tpool_create(int num_of_threads, int queue_size){
 
     pool->worker_threads = (pthread_t *)malloc(sizeof(pthread_t) * num_of_threads);
     pool->queue = (s_tpool_task *)malloc(sizeof(s_tpool_task) * queue_size);
+
+    // Initializing completion buffer
+
     tout = (s_task_out *)malloc(sizeof(s_task_out) * queue_size);
 
     //Initializing mutex
@@ -264,6 +283,7 @@ int f_tpool_free(tpool_t *pool){
     pthread_cond_destroy(&(pool->notify));
 
     free(pool);
+    free(tout);
     return 0;
 }
 
@@ -285,6 +305,7 @@ static void *f_worker_thread(void *tpool){
         // Getting tasks
         task.func = pool->queue[pool->head].func;
         task.argument = pool->queue[pool->head].argument;
+        task.task_id = pool->queue[pool->head].task_id;
 
         pool->head = (pool->head + 1) % pool->queue_size;
 
@@ -295,6 +316,12 @@ static void *f_worker_thread(void *tpool){
 
         // starting the work
         task.func(task.argument);
+
+        // updating the task status as complete
+        // pthread_mutex_lock(&tlock);
+        // tout->tail.task_id = task.task_id;
+        // tout.status = TASK_FINISHED;
+
     }
 
     pool->starting_threads--;
