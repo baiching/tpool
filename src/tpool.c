@@ -340,7 +340,7 @@ static void *f_worker_thread(void *tpool){
     return NULL;
 }
 
-int f_tpool_done(tpool_t *pool, TaskOut *task, int maxoutput){
+int f_tpool_done(TaskOut *task, int maxoutput){
 
     int ncount = 0;
 
