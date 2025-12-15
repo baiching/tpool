@@ -1,6 +1,25 @@
 # ThreadPool Library
 A simple C/C++ threadpool implementation with task completion tracking.
 
+# Tool Requirements
+* Mingw gcc compiler 6.3 and above
+* mingw32-make
+
+## Build and Run 
+* Create a new directory named buid
+* Go to build directory
+```bash 
+cd build
+```
+* To confure 
+```bash
+cmake -G "MinGW Makefiles" ..
+```
+* To build the project
+```
+cmake --build .
+```
+
 ## API Reference
 ```c
 uint32_t f_get_taskid(void)
