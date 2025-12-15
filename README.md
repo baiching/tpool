@@ -6,6 +6,8 @@ A simple C/C++ threadpool implementation with task completion tracking.
 * mingw32-make
 
 ## Build and Run 
+
+## For Windows
 * Create a new directory named buid
 * Go to build directory
 ```bash 
@@ -22,7 +24,7 @@ cmake --build .
 
 ## API Reference
 ```c
-uint32_t f_get_taskid(void)
+uint32_t f_tpool_get_taskid(void)
 ```
 Returns a unique thread-safe task ID.
 
@@ -68,12 +70,11 @@ Destroys threadpool, finishing all pending tasks.
 
 Returns: 0 on success, -1 on failure
 
-Limits
+## Limits
 Max threads: 64
 
 Max queue size: 65536
-
-Notes
+## Notes
 Thread-safe design
 
 C11 and upwards compatible

@@ -112,7 +112,7 @@ static tpool_t *init(tpool_t *pool){
     return pool;
 }
 
-uint32_t f_get_taskid(void){
+uint32_t f_tpool_get_taskid(void){
     pthread_mutex_lock(&tlock);
     tid++;
     pthread_mutex_unlock(&tlock);
@@ -285,7 +285,7 @@ static int f_tpool_free(tpool_t *pool){
     pthread_cond_destroy(&(pool->notify));
 
     free(pool);
-    free(tout->out_queue)
+    free(tout->out_queue);
     free(tout);
     return 0;
 }
