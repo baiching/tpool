@@ -73,10 +73,6 @@ Max threads: 64
 
 Max queue size: 65536
 
-Building
-```bash
-gcc -o myapp myapp.c -lpthread
-```
 Notes
 Thread-safe design
 
