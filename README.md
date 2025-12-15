@@ -11,7 +11,7 @@ A simple C/C++ threadpool implementation with task completion tracking.
 ```bash 
 cd build
 ```
-* To confure 
+* To configure 
 ```bash
 cmake -G "MinGW Makefiles" ..
 ```
