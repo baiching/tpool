@@ -218,7 +218,7 @@ int f_tpool_add_task(tpool_t *pool, uint32_t taskid, void (*function)(void *), v
         pool->queue[pool->tail].func = function;
         pool->queue[pool->tail].argument = arg;
         pool->queue[pool->tail].task_id = taskid;
-
+        printf("task added.\n");
         // pushing the tail to next emty queue
         pool->tail = next;
         pool->queue_counter++;
@@ -237,12 +237,14 @@ int f_tpool_add_task(tpool_t *pool, uint32_t taskid, void (*function)(void *), v
         printf("Thread mutex unlock failed.\n");
         err = -1;
     }
-
+    //printf("task added.\n");
     return err;
 }
 
 int f_tpool_destroy(tpool_t *pool){
+
     pool->stop = 1;
+
     if(pool == NULL){
         printf("Invalid threadpool.\n");
         return -1;
@@ -262,7 +264,6 @@ int f_tpool_destroy(tpool_t *pool){
     pthread_cond_broadcast(&(pool->notify));
     pthread_mutex_unlock(&(pool->lock));
 
-    printf("Inside Destroy! %d.\n", pool->starting_threads);
     // joining all the worker threads
     for(int i = 0; i < pool->starting_threads; i++){
         if(pthread_join(pool->worker_threads[i], NULL) < 0) {
@@ -360,7 +361,7 @@ int f_tpool_done(TaskOut *task, int maxoutput){
     }
 
     if(task == NULL){
-        printf("Tasout can't be NULL.\n");
+        printf("TasOut can't be NULL.\n");
         return -1;
     }
 

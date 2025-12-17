@@ -23,7 +23,7 @@ int main(){
         return -1;
     }
 
-    printf("=== Test: Threadpool creation destroy PASSED. ===\n");
+    printf("=== Test1: Threadpool creation destroy PASSED. ===\n");
 
     return 0;
 }

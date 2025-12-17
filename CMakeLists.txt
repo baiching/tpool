@@ -6,7 +6,8 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
 # ThreadPool library
-add_library(tpool STATIC src/tpool.c)
+add_library(tpool STATIC src/tpool.c
+                         src/tpool.h)
 
 
 # Making it available for any include paths
@@ -24,13 +25,21 @@ option(BUILD_TESTING "Build the testing tree" ON)
 if(BUILD_TESTING)
     enable_testing()
 
-    add_executable(tpool_test test/apitest_create_destroy.c
-    test/apitest_addingtasks.c
-    )
+    # test1
+    add_executable(tpool_test1 test/apitest_create_destroy.c)
+    target_link_libraries(tpool_test1 tpool)
+    add_dependencies(tpool_test1 tpool)
+    add_test(NAME tpool_test1 COMMAND tpool_test1)
 
-    target_link_libraries(tpool_test tpool)
-    add_test(NAME tpool_test COMMAND tpool_test)
+    #test2
+    add_executable(tpool_test2 test/apitest_addingtasks.c)
+    target_link_libraries(tpool_test2 tpool)
+    add_dependencies(tpool_test2 tpool)
+    add_test(NAME tpool_test2 COMMAND tpool_test2)
+
 endif()
 
 # Add includes
 # target_include_directories(${PROJECT_NAME} PRIVATE tpool)
+
+# set_source_files_properties(src/tpool.c PROPERTIES OBJECT_DEPENDS src/tpool.h)
