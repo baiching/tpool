@@ -129,7 +129,16 @@ tpool_t *f_tpool_create(int num_of_threads, int queue_size){
         return NULL;
     }
 
-    if(init(pool) == NULL){
+    // Initializing the variables
+    pool = (tpool_t *)malloc(sizeof(tpool_t));
+
+    pool->head = 0;
+    pool->tail = 0;
+    pool->starting_threads = 0;
+    pool->queue_counter = 0;
+    pool->stop = 0;
+
+    if(pool == NULL){
         printf("Threadpool memory allocation failed.\n");
         exit(EXIT_FAILURE);
     }
@@ -233,7 +242,7 @@ int f_tpool_add_task(tpool_t *pool, uint32_t taskid, void (*function)(void *), v
 }
 
 int f_tpool_destroy(tpool_t *pool){
-
+    pool->stop = 1;
     if(pool == NULL){
         printf("Invalid threadpool.\n");
         return -1;
@@ -244,8 +253,8 @@ int f_tpool_destroy(tpool_t *pool){
         return -1;
     }
 
-    if(pool->stop != 0){
-        printf("please set the value of stop as true to stop the threads.\n");
+    if(pool->stop != 1){
+        printf("please set the value of stop as 1 to stop the threads.\n");
         return -1;
     }
 
@@ -253,13 +262,14 @@ int f_tpool_destroy(tpool_t *pool){
     pthread_cond_broadcast(&(pool->notify));
     pthread_mutex_unlock(&(pool->lock));
 
-
+    printf("Inside Destroy! %d.\n", pool->starting_threads);
     // joining all the worker threads
     for(int i = 0; i < pool->starting_threads; i++){
         if(pthread_join(pool->worker_threads[i], NULL) < 0) {
             printf("Pool deallocation failed.\n");
             return -1;
         }
+
     }
 
     return f_tpool_free(pool);
@@ -301,7 +311,7 @@ static void *f_worker_thread(void *tpool){
             pthread_cond_wait(&(pool->notify), &(pool->lock));
         }
 
-        if((pool->stop == 1) && (pool->starting_threads == 0)){
+        if((pool->stop == 1)){
             break;
         }
 
