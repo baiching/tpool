@@ -12,11 +12,11 @@
  * For status of tasks in the queue
  *
  */
-typedef enum {
-    TASK_PENDING,
-    TASK_ONGOING,
-    TASK_FINISHED
-}e_task_status;
+// enum e_task_status{
+//     TASK_PENDING,
+//     TASK_ONGOING,
+//     TASK_FINISHED
+// };
 
 /**
  * A struct for thread pool tasks management
@@ -41,10 +41,10 @@ typedef struct {
  * @var queue_counter: the number of tasks in the queue
  *
  */
-struct TaskOut {
-    uint32_t task_id;
-    e_task_status status;
-};
+// struct TaskOut {
+//     uint32_t task_id;
+//     e_task_status status;
+// };
 
 /**
  * @var tlock: lock for output ring
@@ -218,7 +218,7 @@ int f_tpool_add_task(tpool_t *pool, uint32_t taskid, void (*function)(void *), v
         pool->queue[pool->tail].func = function;
         pool->queue[pool->tail].argument = arg;
         pool->queue[pool->tail].task_id = taskid;
-        printf("task added.\n");
+
         // pushing the tail to next emty queue
         pool->tail = next;
         pool->queue_counter++;

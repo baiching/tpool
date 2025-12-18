@@ -24,8 +24,33 @@ extern "C" {
 #define MAX_THREADS 64
 #define MAX_QUEUE 65536
 
+/**
+ * For status of tasks in the queue
+ *
+ */
+typedef enum {
+    TASK_PENDING,
+    TASK_ONGOING,
+    TASK_FINISHED
+}e_task_status;
+
+//typedef enum e_task_status e_task_status;
+
 typedef struct tpool_t tpool_t;
-typedef struct TaskOut TaskOut;
+
+/**
+ * @brief It's exclusively for serving executed tasks taskid on completion
+ *
+ * @var task_id: the unique identifier for each task
+ * @var status: current state of the task
+ * @var queue_size: the size of the ring buffer for tasks
+ * @var queue_counter: the number of tasks in the queue
+ *
+ */
+typedef struct{
+    uint32_t task_id;
+    e_task_status status;
+}TaskOut;
 
 
 /**

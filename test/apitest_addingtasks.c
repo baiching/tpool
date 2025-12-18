@@ -1,3 +1,7 @@
+/**
+ * To test if the task gets added and executed
+ */
+
 #include <stdio.h>
 #include <stdint.h>
 #include <windows.h>
@@ -15,7 +19,8 @@ void square(void *arg){
 
 int main() {
     tpool_t *pool;
-    uint32_t tid = f_tpool_get_taskid();
+    uint32_t tid[3];
+    // TaskOut completed[10];
 
     printf("=== Starting threadpool test ===\n");
 
