@@ -100,18 +100,6 @@ static void *f_worker_thread(void *tpool);
 
 static int f_tpool_free(tpool_t *pool);
 
-static tpool_t *init(tpool_t *pool){
-    pool = (tpool_t *)malloc(sizeof(tpool_t));
-
-    pool->head = 0;
-    pool->tail = 0;
-    pool->starting_threads = 0;
-    pool->queue_counter = 0;
-    pool->stop = 0;
-
-    return pool;
-}
-
 uint32_t f_tpool_get_taskid(void){
     pthread_mutex_lock(&tlock);
     tid++;
@@ -132,25 +120,28 @@ tpool_t *f_tpool_create(int num_of_threads, int queue_size){
     // Initializing the variables
     pool = (tpool_t *)malloc(sizeof(tpool_t));
 
+    if(pool == NULL){
+        printf("Threadpool memory allocation failed.\n");
+        exit(EXIT_FAILURE);
+    }
+
     pool->head = 0;
     pool->tail = 0;
     pool->starting_threads = 0;
     pool->queue_counter = 0;
     pool->stop = 0;
 
-    if(pool == NULL){
-        printf("Threadpool memory allocation failed.\n");
-        exit(EXIT_FAILURE);
-    }
-
     pool->num_of_threads = num_of_threads;
+    pool->queue_size = queue_size;
 
     pool->worker_threads = (pthread_t *)malloc(sizeof(pthread_t) * num_of_threads);
     pool->queue = (s_tpool_task *)malloc(sizeof(s_tpool_task) * queue_size);
 
     // Initializing completion buffer
     tout = (TaskMaintainer *)malloc(sizeof(TaskMaintainer));
-    tout->head = tout->tail = tout->queue_counter = 0;
+    tout->head = 0;
+    tout->tail = 0;
+    tout->queue_counter = 0;
     tout->queue_size = queue_size;
     tout->out_queue = (TaskOut *)malloc(sizeof(TaskOut) * queue_size);
 
@@ -223,6 +214,7 @@ int f_tpool_add_task(tpool_t *pool, uint32_t taskid, void (*function)(void *), v
         pool->tail = next;
         pool->queue_counter++;
 
+
         // Signal a waiting worker that the queue has been updated
         // and the lock will be released for it to proceed.
         if(pthread_cond_signal(&(pool->notify)) < 0) {
@@ -237,7 +229,7 @@ int f_tpool_add_task(tpool_t *pool, uint32_t taskid, void (*function)(void *), v
         printf("Thread mutex unlock failed.\n");
         err = -1;
     }
-    //printf("task added.\n");
+
     return err;
 }
 
@@ -325,7 +317,6 @@ static void *f_worker_thread(void *tpool){
 
         pool->queue_counter--;
 
-
         pthread_mutex_unlock(&(pool->lock));
 
         // starting the work
@@ -355,6 +346,11 @@ int f_tpool_done(TaskOut *task, int maxoutput){
 
     int ncount = 0;
 
+    if(tout == NULL){
+        printf("tout can't be NULL.\n");
+        return -1;
+    }
+
     if(maxoutput <= 0){
         printf("Please spcify maxoutput variable to greater than 0.\n");
         return -1;
@@ -367,7 +363,9 @@ int f_tpool_done(TaskOut *task, int maxoutput){
 
     pthread_mutex_lock(&tout->tlock);
 
-    for(int i = 0; i < maxoutput && tout->head != tout->tail; i++){
+    for(int i = 0; i < maxoutput; i++){
+        if(tout->head == tout->tail) break;
+
         // storing the output from the buffer
         task[i].task_id = tout->out_queue[tout->head].task_id;
         task[i].status = tout->out_queue[tout->head].status;
