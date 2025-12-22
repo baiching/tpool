@@ -316,6 +316,7 @@ static void *f_worker_thread(void *tpool){
         pool->head = (pool->head + 1) % pool->queue_size;
 
         pool->queue_counter--;
+        pthread_cond_signal(&(pool->notify));
 
         pthread_mutex_unlock(&(pool->lock));
 
@@ -331,6 +332,7 @@ static void *f_worker_thread(void *tpool){
         tout->tail = (tout->tail + 1) % tout->queue_size;
         tout->queue_counter++;
 
+        pthread_cond_signal(&tout->tnotify);
         pthread_mutex_unlock(&(tout->tlock));
 
     }
@@ -345,6 +347,7 @@ static void *f_worker_thread(void *tpool){
 int f_tpool_done(TaskOut *task, int maxoutput){
 
     int ncount = 0;
+    int loopSize = 0;
 
     if(tout == NULL){
         printf("tout can't be NULL.\n");
@@ -363,7 +366,19 @@ int f_tpool_done(TaskOut *task, int maxoutput){
 
     pthread_mutex_lock(&tout->tlock);
 
-    for(int i = 0; i < maxoutput; i++){
+    // if queue is empty wait
+    while(tout->queue_counter == 0) {
+        pthread_cond_wait(&tout->tnotify, &tout->tlock);
+    }
+
+    if(maxoutput <= tout->queue_counter){
+        loopSize = tout->queue_counter;
+    }
+    else{
+        loopSize = maxoutput;
+    }
+
+    for(int i = 0; i < loopSize; i++){
         if(tout->head == tout->tail) break;
 
         // storing the output from the buffer
@@ -371,10 +386,11 @@ int f_tpool_done(TaskOut *task, int maxoutput){
         task[i].status = tout->out_queue[tout->head].status;
 
         tout->head = (tout->head + 1) % tout->queue_size;
+        tout->queue_counter--;
         ncount++;
 
     }
-
+    pthread_cond_signal(&tout->tnotify);
     pthread_mutex_unlock(&(tout->tlock));
 
     return ncount;
