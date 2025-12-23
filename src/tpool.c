@@ -195,7 +195,7 @@ int f_tpool_add_task(tpool_t *pool, uint32_t taskid, void (*function)(void *), v
         return -1;
     }
 
-    int next = (pool->tail + 1) % pool->queue_size;
+    //int next = (pool->tail + 1) % pool->queue_size;
 
     do {
         // checking if the queue is full or not
@@ -211,7 +211,7 @@ int f_tpool_add_task(tpool_t *pool, uint32_t taskid, void (*function)(void *), v
         pool->queue[pool->tail].task_id = taskid;
 
         // pushing the tail to next emty queue
-        pool->tail = next;
+        pool->tail = (pool->tail + 1) % pool->queue_size;
         pool->queue_counter++;
 
 
@@ -316,8 +316,8 @@ static void *f_worker_thread(void *tpool){
         pool->head = (pool->head + 1) % pool->queue_size;
 
         pool->queue_counter--;
-        pthread_cond_signal(&(pool->notify));
 
+        pthread_cond_signal(&(pool->notify));
         pthread_mutex_unlock(&(pool->lock));
 
         // starting the work
