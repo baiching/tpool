@@ -8,7 +8,7 @@
  *                                                                 returns the newly created threadpool.
  * 3. int f_tpool_add_task(pool, taskid, function pointer, argument): adds task it the tpool queue
  * 4. int f_tpool_done(*task, maxoutput): retrives the completed tasks status with their ID's
- * 5. int f_tpool_destroy(pool): destroys the threadpool
+ * 5. int f_tpool_destroy(pool): gracefully destroys the threadpool
  *
  */
 
@@ -54,33 +54,54 @@ typedef struct{
 
 
 /**
- * @breif Returns a unique task id(thread safe)
+ * @brief Generate a unique task identifier
  *
+ * @return Unique 32-bit task identifier
  *
+ * @note Thread-safe: safe to call from multiple threads concurrently.
+ * @note Must be called to generate task IDs before calling f_tpool_add_task().
+ * @note The identifier is monotonically increasing until wrap-around at 2^32-1.
+ *
+ * @see f_tpool_add_task
  */
 uint32_t f_tpool_get_taskid(void);
+
 /**
- * @brief Creates the thread pool
+ * @brief Create a new threadpool instance
  *
- * @param num_of_threads: the number of threads you want to be created
- * @param queue_size:     the size of the queue for tasks
+ * @param[in] num_of_threads Number of worker threads (1 to MAX_THREADS)
+ * @param[in] queue_size     Maximum pending tasks (1 to MAX_QUEUE)
  *
- * @return a new threadpool or a NULL value with a printf stating the error
+ * @return Pointer to new threadpool, or NULL on failure
  *
+ * @note Threads start immediately and wait for tasks.
+ * @note Use f_tpool_destroy() to clean up the threadpool.
+ *
+ * @warning Ensure queue_size is sufficient for expected workload to avoid
+ *          f_tpool_add_task() returning "queue full" errors.
+ *
+ * @see f_tpool_destroy
  */
 tpool_t *f_tpool_create(int num_of_threads, int queue_size);
 
 
 /**
- * @brief Adds new taks in the queue
+ * @brief Submit a task to the threadpool for execution
  *
- * @param pool:         the pointer to the thread pool
- * @param function:     the function pointer points to the function that needed to run
- * @param arg:          the argument that needs to be passed to the function
- * @param taskid:       taskid for individual tasks, f_get_taskid() provides it
+ * @param[in] pool      Threadpool instance (must be initialized)
+ * @param[in] taskid    Unique task identifier (use f_tpool_get_taskid())
+ * @param[in] function  Function to execute in worker thread
+ * @param[in] arg       Argument passed to the function (may be NULL)
  *
- * @return 0 on Success and -1 on failure
+ * @retval  0   Task successfully queued
+ * @retval -1   Error: invalid parameters, pool stopped, or queue full
  *
+ * @note The function will be called asynchronously in a worker thread.
+ * @note The argument pointer must remain valid until the task completes.
+ * @note Use f_tpool_get_taskid() to generate unique task identifiers.
+ *
+ * @see f_tpool_get_taskid
+ * @see f_tpool_create
  */
 int f_tpool_add_task(tpool_t *pool, uint32_t taskid, void ( *function)(void *), void *arg);
 
@@ -105,12 +126,24 @@ int f_tpool_done(TaskOut *task, int maxoutput);
 
 
 /**
- * @brief Finishes all unfished tasks and destroy the thread pool
+ * @brief Gracefully shutdown and destroy a threadpool
  *
- * @param pool:         the thread pool that required to destroy
+ * @param[in] pool Threadpool to destroy (must be initialized)
  *
- * @return              0 on Success and -1 on failure
+ * @retval  0   Threadpool successfully destroyed
+ * @retval -1   Error: invalid pool or destruction failed
  *
+ * @note This function performs a graceful shutdown:
+ *       1. Stops accepting new tasks
+ *       2. Waits for all queued tasks to complete
+ *       3. Signals worker threads to exit
+ *       4. Waits for worker threads to terminate
+ *       5. Frees all associated resources
+ *
+ * @warning Blocks until all pending tasks finish execution.
+ * @warning Do not call from within a worker thread (deadlock).
+ *
+ * @see f_tpool_create
  */
 int f_tpool_destroy(tpool_t *pool);
 

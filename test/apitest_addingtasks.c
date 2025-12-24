@@ -4,7 +4,6 @@
 
 #include <stdio.h>
 #include <stdint.h>
-#include <windows.h>
 #include "tpool.h"
 
 
@@ -42,14 +41,6 @@ int main() {
     for(int i = 0; i < 10; i++){
         printf("%d\n", completed[i].task_id);
     }
-
-
-
-    #ifdef _WIN32
-        Sleep(10);
-    #else
-        sleep(1);
-    #endif
 
     if(f_tpool_destroy(pool) < 0){
         printf("failed to destroy the threadpool.\n");
