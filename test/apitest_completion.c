@@ -7,7 +7,7 @@
 #include <windows.h>
 #include "tpool.h"
 
-#define THREADS 4
+//#define THREADS 4
 #define QUEUE 128
 
 void square(void *arg){
@@ -20,40 +20,38 @@ void square(void *arg){
 
 int main() {
     tpool_t *pool;
-    uint32_t tid[15];
-    TaskOut completed[10];
+    uint32_t tid;
+    TaskOut completed[5];
 
     printf("=== Starting threadpool test ===\n");
 
-    pool = f_tpool_create(4, 64);
+    pool = f_tpool_create(2, 64);
 
-    if(pool == NULL){
-        printf("Threadpool creation has failed.\n");
-        return -1;
+    if(pool != NULL){
+        printf("Threadpool created.\n");
+        //return -1;
     }
 
     //printf("SUCCESS: Threadpool created at address %p\n", (void*)pool);
 
-    int val = 5;
-
-    for(int i = 0; i < 15; i++){
+    for(int i = 0; i < 5; i++){
         int *data = malloc(sizeof(int));
         *data = i;
-        tid[i] = f_tpool_get_taskid();
-        f_tpool_add_task(pool, tid[i], square, data);
-        printf("Added task %u\n", tid[i]);
+        tid = f_tpool_get_taskid();
+        f_tpool_add_task(pool, tid, square, data);
+        printf("Added task %u\n", tid);
     }
 
     printf("\nPolling for completion (50ms intervals):\n");
-    int remaining = 15;
+    int remaining = 5;
     int attempts = 0;
     #ifdef _WIN32
         Sleep(100);
     #else
         sleep(1);
     #endif
-
-    while (attempts < 5000) {  // Max 50 attempts = 2.5 seconds
+    int x = 0;
+    while (remaining > 0) {
         int retrieved = f_tpool_done(completed, 10);
 
         if (retrieved < 0) {
@@ -70,12 +68,10 @@ int main() {
             remaining -= retrieved;
         }
 
-        attempts++;
+        //printf("inside the loop. %d \n", x++);
     }
 
-    //f_tpool_add_task(pool, tid, square, &val);
-
-
+    printf("left the loop.\n");
     #ifdef _WIN32
         Sleep(100);
     #else

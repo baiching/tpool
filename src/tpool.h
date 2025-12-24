@@ -59,7 +59,6 @@ typedef struct{
  *
  */
 uint32_t f_tpool_get_taskid(void);
-
 /**
  * @brief Creates the thread pool
  *

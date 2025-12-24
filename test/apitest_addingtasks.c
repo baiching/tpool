@@ -7,22 +7,22 @@
 #include <windows.h>
 #include "tpool.h"
 
-#define THREADS 4
-#define QUEUE 128
 
 void square(void *arg){
     int *n = (int *)arg;
 
-    int sq = (*n) * (*n);
-    printf("The squre if %d is: %d.\n", *n, sq);
+    //int sq = (*n) * (*n);
+    printf("The squre if %d is: %d.\n", *n,  (*n) * (*n));
 }
 
 int main() {
     tpool_t *pool;
-    uint32_t tid[3];
+    uint32_t tid;
     // TaskOut completed[10];
 
     printf("=== Starting threadpool test ===\n");
+
+    tid = f_tpool_get_taskid();
 
     pool = f_tpool_create(1, 10);
 
@@ -33,9 +33,16 @@ int main() {
 
     //printf("SUCCESS: Threadpool created at address %p\n", (void*)pool);
 
-    int val = 5;
+    int *val = malloc(sizeof(int));
+    *val = 5;
 
-    f_tpool_add_task(pool, tid, square, &val);
+    f_tpool_add_task(pool, tid, square, val);
+    TaskOut completed[10];
+    f_tpool_done(completed, 2);
+    for(int i = 0; i < 10; i++){
+        printf("%d\n", completed[i].task_id);
+    }
+
 
 
     #ifdef _WIN32

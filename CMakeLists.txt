@@ -43,6 +43,12 @@ if(BUILD_TESTING)
     add_dependencies(tpool_test3 tpool)
     add_test(NAME tpool_test3 COMMAND tpool_test3)
 
+    #test4
+    add_executable(tpool_test4 test/thread_test.c)
+    # target_link_libraries(tpool_test4 tpool)
+    # add_dependencies(tpool_test4 tpool)
+    add_test(NAME tpool_test4 COMMAND tpool_test4)
+
 endif()
 
 # Add includes

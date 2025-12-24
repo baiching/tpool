@@ -108,6 +108,34 @@ uint32_t f_tpool_get_taskid(void){
     return tid;
 }
 
+static int init_completion_buffer(int queue_size){
+    // Initializing completion buffer
+    tout = (TaskMaintainer *)malloc(sizeof(TaskMaintainer));
+    tout->head = 0;
+    tout->tail = 0;
+    tout->queue_counter = 0;
+    tout->queue_size = queue_size;
+    tout->out_queue = (TaskOut *)malloc(sizeof(TaskOut) * queue_size);
+
+    //Initializing mutex
+    if((pthread_mutex_init(&(tout->tlock), NULL) < 0)){
+        printf("Error occured Initializing mutex: %s.\n", strerror(errno));
+        free(tout->out_queue);
+        free(tout);
+        return -1;
+    }
+
+    // Initilizing notifying variable
+    if((pthread_cond_init(&(tout->tnotify), NULL) < 0)){
+        printf("Error occured initializing condtionals: %s.\n", strerror(errno));
+        free(tout->out_queue);
+        free(tout);
+        return -1;
+    }
+
+    return 0;
+}
+
 tpool_t *f_tpool_create(int num_of_threads, int queue_size){
     // Threalpool creation goes here
     tpool_t *pool = NULL;
@@ -138,25 +166,31 @@ tpool_t *f_tpool_create(int num_of_threads, int queue_size){
     pool->queue = (s_tpool_task *)malloc(sizeof(s_tpool_task) * queue_size);
 
     // Initializing completion buffer
-    tout = (TaskMaintainer *)malloc(sizeof(TaskMaintainer));
-    tout->head = 0;
-    tout->tail = 0;
-    tout->queue_counter = 0;
-    tout->queue_size = queue_size;
-    tout->out_queue = (TaskOut *)malloc(sizeof(TaskOut) * queue_size);
+    init_completion_buffer(queue_size);
+    // tout = (TaskMaintainer *)malloc(sizeof(TaskMaintainer));
+    // tout->head = 0;
+    // tout->tail = 0;
+    // tout->queue_counter = 0;
+    // tout->queue_size = queue_size;
+    // tout->out_queue = (TaskOut *)malloc(sizeof(TaskOut) * queue_size);
 
     //Initializing mutex
-    if((pthread_mutex_init(&(pool->lock), NULL) < 0) || (pthread_mutex_init(&(tout->tlock), NULL) < 0)){
+    if((pthread_mutex_init(&(pool->lock), NULL) < 0)){
         printf("Error occured Initializing mutex: %s.\n", strerror(errno));
         free(pool);
         return NULL;
     }
 
     // Initilizing notifying variable
-    if((pthread_cond_init(&(pool->notify), NULL) < 0) || (pthread_cond_init(&(tout->tnotify), NULL) < 0)){
+    if((pthread_cond_init(&(pool->notify), NULL) < 0)){
         printf("Error occured initializing condtionals: %s.\n", strerror(errno));
         free(pool);
         return NULL;
+    }
+
+    if(tout == NULL) {
+        printf("FATAL: tout initialization failed!\n");
+        exit(1);
     }
 
     // creating worker threads
@@ -236,6 +270,10 @@ int f_tpool_add_task(tpool_t *pool, uint32_t taskid, void (*function)(void *), v
 int f_tpool_destroy(tpool_t *pool){
 
     pool->stop = 1;
+
+    while(pool->queue_counter > 0){
+        pthread_cond_signal(&(pool->notify));
+    }
 
     if(pool == NULL){
         printf("Invalid threadpool.\n");
@@ -324,7 +362,9 @@ static void *f_worker_thread(void *tpool){
         task.func(task.argument);
 
         // updating the task status as complete
-        pthread_mutex_lock(&tout->tlock);
+        pthread_mutex_lock(&(tout->tlock));
+
+
         tout->out_queue[tout->tail].task_id = task.task_id;
         tout->out_queue[tout->tail].status = TASK_FINISHED;
 
@@ -332,7 +372,7 @@ static void *f_worker_thread(void *tpool){
         tout->tail = (tout->tail + 1) % tout->queue_size;
         tout->queue_counter++;
 
-        pthread_cond_signal(&tout->tnotify);
+        pthread_cond_signal(&(tout->tnotify));
         pthread_mutex_unlock(&(tout->tlock));
 
     }
