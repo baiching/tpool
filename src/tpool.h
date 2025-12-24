@@ -85,14 +85,21 @@ tpool_t *f_tpool_create(int num_of_threads, int queue_size);
 int f_tpool_add_task(tpool_t *pool, uint32_t taskid, void ( *function)(void *), void *arg);
 
 /**
- * @brief Adds new taks in the queue
+ * @brief Retrieve completed task results (non-blocking)
  *
+ * @param[out] tasks          Array to receive completed task information
+ * @param[in]  maxoutput      Maximum number of tasks to retrieve (size of tasks array)
  *
- * @param task:         It's size is needed to be equal to the queue_size parameter for tpool creation
- * @param maxoutput:    total results could be returned at once
+ * @retval  n > 0   Number of tasks successfully retrieved
+ * @retval  0       No tasks completed yet
+ * @retval -1       Error: invalid parameters or buffer not initialized
  *
- * @return              number of completed tasks. On failure it returns -1
+ * @note This function is non-blocking. Returns immediately even if no tasks
+ *       are completed. Caller should implement polling if waiting is required.
+ * @note Retrieved tasks are removed from the output buffer.
  *
+ * @see f_tpool_add_task
+ * @see init_completion_buffer
  */
 int f_tpool_done(TaskOut *task, int maxoutput);
 
